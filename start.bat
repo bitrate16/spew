@@ -1,1 +1,2 @@
 python spew.py
+PAUSE
