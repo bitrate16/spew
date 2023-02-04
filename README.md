@@ -14,7 +14,7 @@ Clone/download & unpack
 Use `start` & `clear-cache` scripts to run lazy
 
 ```
-usage: spew.py [-h] [-p PATH] [-b BACKUP] [-v VERSIONS] [-c] [-l]
+usage: spew.py [-h] [-p PATH] [-b BACKUP] [-v VERSIONS] [-m MAX_WAIT] [-c] [-l]
 
 httpim
 
@@ -24,7 +24,9 @@ optional arguments:
   -b BACKUP, --backup BACKUP
                         Backup directory path, creates __spew_backup__ subdir
   -v VERSIONS, --versions VERSIONS
-                        Max file versions, will delete old
+                        Max file versions, will delete old versions after making new backup
+  -m MAX_WAIT, --max_wait MAX_WAIT
+                        Time that should pass since last file change so it would get backed up, in milliseconds (anti-stacking). Represents how often do you press CTRL+S on file. For eample, set to 5000 and file will be saved 5 seconds after last change, that may be useful for very large files
   -c, --clear           Clear backups
   -l, --license         License
 ```

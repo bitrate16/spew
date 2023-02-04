@@ -20,6 +20,7 @@ import os
 import time
 import shutil
 import argparse
+import threading
 
 import watchdog
 import watchdog.events
@@ -41,20 +42,22 @@ def backup_dir(relative_path: str):
 	# Absolute path
 	backup_parent = os.path.join(args.backup, parent)
 
-	# Target path is <hex_ts>.<relative_path_filename>
-	backup_filename = f'{ round(time.time() * 1000) :016x}.{ filename }'
+	# Target path is <ts>.<relative_path_filename>
+	now = datetime.now()
+	now = now.strftime("%d.%m.%Y_%H.%M.%S")
+	backup_filename = f'{ now }.{ filename }'
 
 	# Make copy
 	try:
 		# Log on version create
-		spew_log('(backup)', os.path.join(args.path, relative_path)) # , ' --> ', os.path.join(backup_parent, backup_filename))
+		spew_log('(backup)', os.path.join(args.path, relative_path))
 
 		os.makedirs(backup_parent, exist_ok=True)
 		shutil.copy(os.path.join(args.path, relative_path), os.path.join(backup_parent, backup_filename))
 
 		if args.versions is not None and args.versions > 0:
 			# Remove excessive backup
-			versions = [ f for f in os.listdir(backup_parent) if f[17:] == filename ]
+			versions = [ f for f in os.listdir(backup_parent) if f[20:] == filename ]
 
 			if len(versions) > args.versions:
 				for f in sorted(versions)[:len(versions) - args.versions]:
@@ -71,6 +74,9 @@ def backup_dir(relative_path: str):
 		import traceback
 		traceback.print_exc()
 
+# Keep track of last backup timestamps to prevent event stacking
+backup_timeout = {}
+
 class MHandler(watchdog.events.FileSystemEventHandler):
 
 	@staticmethod
@@ -80,20 +86,23 @@ class MHandler(watchdog.events.FileSystemEventHandler):
 
 		# Not in backup folder & In target folder
 		if os.path.commonpath([args.backup]) != os.path.commonpath([args.backup, event.src_path]) and os.path.commonpath([args.path]) == os.path.commonpath([args.path, event.src_path]):
-			if event.event_type == 'created':
-				# Spew
-				spew_log('(created)', event.src_path)
+			relpath = os.path.relpath(event.src_path, args.path)
+			if event.event_type == 'created' or event.event_type == 'modified':
 
-				# Do a backup
-				relpath = os.path.relpath(event.src_path, args.path)
-				backup_dir(relpath)
-			elif event.event_type == 'modified':
-				# Spew
 				spew_log('(modified)', event.src_path)
 
-				# Do a backup
-				relpath = os.path.relpath(event.src_path, args.path)
-				backup_dir(relpath)
+				# Reschedule modification event
+				def run_copy_scheduled(relpath):
+					# Clear from set
+					backup_timeout.pop(relpath, None)
+					backup_dir(relpath)
+
+				# Clear last timer
+				current_timer = backup_timeout.get(relpath, None)
+				if current_timer is not None:
+					current_timer.cancel()
+				backup_timeout[relpath] = threading.Timer(args.max_wait / 1000, run_copy_scheduled, (relpath,))
+				backup_timeout[relpath].start()
 
 
 if __name__ == '__main__':
@@ -117,7 +126,14 @@ if __name__ == '__main__':
 		'-v',
 		'--versions',
 		type=int,
-		help='Max file versions, will delete old',
+		help='Max file versions, will delete old versions after making new backup',
+	)
+	parser.add_argument(
+		'-m',
+		'--max_wait',
+		type=int,
+		default=1000,
+		help='Time that should pass since last file change so it would get backed up, in milliseconds (anti-stacking). Represents how often do you press CTRL+S on file. For eample, set to 5000 and file will be saved 5 seconds after last change, that may be useful for very large files',
 	)
 	parser.add_argument(
 		'-c',
