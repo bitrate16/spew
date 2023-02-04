@@ -9,7 +9,9 @@ Automatic on change file backuper
 * Good for automatically backing up artworks during many CTRL+S
 
 # Usage
-Clone/download & unpack. use `start` & `clear-cache` scripts to run lazy
+Clone/download & unpack
+
+Use `start` & `clear-cache` scripts to run lazy
 
 ```
 usage: spew.py [-h] [-p PATH] [-b BACKUP] [-v VERSIONS] [-c] [-l]
