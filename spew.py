@@ -147,6 +147,12 @@ if __name__ == '__main__':
 		action='store_true',
 		help='License',
 	)
+	parser.add_argument(
+		'-i',
+		'--initial',
+		action='store_true',
+		help='Make initial backup on start',
+	)
 
 	args = parser.parse_args()
 
@@ -173,13 +179,14 @@ if __name__ == '__main__':
 	os.makedirs(args.backup, exist_ok=True)
 
 	# Backup initial directory
-	for root, subdirs, files in os.walk(args.path, followlinks=False):
+	if args.initial:
+		for root, subdirs, files in os.walk(args.path, followlinks=False):
 
-		# No backup backup
-		if os.path.commonpath([args.backup]) != os.path.commonpath([args.backup, root]):
-			for f in files:
-				relpath = os.path.relpath(os.path.join(root, f), args.path)
-				backup_dir(relpath)
+			# No backup backup
+			if os.path.commonpath([args.backup]) != os.path.commonpath([args.backup, root]):
+				for f in files:
+					relpath = os.path.relpath(os.path.join(root, f), args.path)
+					backup_dir(relpath)
 
 	# Start watcher
 	observer = watchdog.observers.Observer()
