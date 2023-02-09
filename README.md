@@ -5,7 +5,7 @@ Automatic on change file backuper
 * Lazy
 * Backup files on change recursively in specified directory
 * Limit amount of versions
-* All files are stored in `__spew_backup__` in format `<timestamp_hex>.<filename>`
+* All files are stored in `__spew_backup__` in format `<date_time>.<filename>`
 * Good for automatically backing up artworks during many CTRL+S
 
 # Usage
